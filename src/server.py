@@ -3,21 +3,38 @@ import os
 import socketserver
 
 PORT = 8000
-HTML_FILE = os.path.join(os.path.dirname(__file__), "contacts.html")
 
+# Типы контента по расширению файла
+content_types = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg'
+}
+
+# Базовая директория скрипта
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class ContactPageHandler(http.server.BaseHTTPRequestHandler):
-    def do_get(self) -> None:
-        try:
-            with open(HTML_FILE, "r", encoding="utf-8") as f:
-                html = f.read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(html.encode("utf-8"))
-        except FileNotFoundError:
-            self.send_error(500, "HTML файл не найден")
+    def do_GET(self):
+        # По умолчанию загружается index.html
+        rel_path = self.path[1:] or 'index.html'
+        ext = os.path.splitext(rel_path)[1]
+        content_type = content_types.get(ext, 'text/plain')
 
+        abs_path = os.path.join(BASE_DIR, rel_path)
+
+        try:
+            with open(abs_path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', content_type)
+            self.end_headers()
+            self.wfile.write(data)
+        except FileNotFoundError:
+            self.send_error(404, f"Файл {rel_path} не найден.")
 
 if __name__ == "__main__":
     with socketserver.TCPServer(("", PORT), ContactPageHandler) as httpd:
